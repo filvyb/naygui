@@ -1,6 +1,7 @@
-import common
+import common, raygui
 
-{.passC: "-I" & getRayguiStyleDir("terminal").}
+const styleData = staticRead(getRayguiStyleDir("terminal") & "/style_terminal.rgs")
 
-proc guiLoadStyleTerminal*() {.importc: "GuiLoadStyleTerminal", cdecl, header: "style_terminal.h".}
-  ## Load style terminal over global style
+proc guiLoadStyleTerminal*() =
+  ## Load style Terminal over global style.
+  guiLoadStyleFromMemory(styleData.toOpenArrayByte(0, styleData.high))

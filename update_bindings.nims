@@ -5,7 +5,7 @@ const
   PkgDir = thisDir()
   RayguiDir = PkgDir / "raygui"
   RayguiGit = "https://github.com/raysan5/raygui.git"
-  RayLatestCommit = "99b37e4d4fdc19e7bf73844d6b9f177cbb27ce24"
+  RayLatestCommit = "020a61bebcbe288b4414de3416e219ef40af847a" # raygui 5.0
   DocsDir = PkgDir / "docs"
   ToolsDir = PkgDir / "tools"
   ApiDir = ToolsDir / "wrapper/api"
@@ -13,7 +13,7 @@ const
 template `/.`(x: string): string =
   when defined(posix): "./" & x else: x
 
-proc fetchLatestRaylib() =
+proc fetchLatestRaygui() =
   var firstTime = false
   if not dirExists(RayguiDir):
     firstTime = true
@@ -77,10 +77,16 @@ task genWrappers, "Generate Nim wrappers":
   genWrapper("raygui")
 
 task update, "Update the raygui git directory":
-  fetchLatestRaylib()
+  fetchLatestRaygui()
   rmDir(PkgDir / "src/raygui")
   cpDir(RayguiDir / "src", PkgDir / "src/raygui")
   cpDir(RayguiDir / "styles", PkgDir / "src/raygui/styles")
+  writeFile(PkgDir / "src/raygui/raygui.c", """#define RAYGUI_IMPLEMENTATION
+#include "raygui.h"
+
+// Release allocations with the same allocator used by raygui.
+void NayguiFree(void *ptr) { RAYGUI_FREE(ptr); }
+""")
 
 task mangle, "Mangle identifiers in raygui source":
   buildMangler()

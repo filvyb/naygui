@@ -1,6 +1,7 @@
-import common
+import common, raygui
 
-{.passC: "-I" & getRayguiStyleDir("ashes").}
+const styleData = staticRead(getRayguiStyleDir("ashes") & "/style_ashes.rgs")
 
-proc guiLoadStyleAshes*() {.importc: "GuiLoadStyleAshes", cdecl, header: "style_ashes.h".}
-  ## Load style ashes over global style
+proc guiLoadStyleAshes*() =
+  ## Load style Ashes over global style.
+  guiLoadStyleFromMemory(styleData.toOpenArrayByte(0, styleData.high))

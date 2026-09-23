@@ -173,7 +173,7 @@ proc generateWrappedProc*(b: var Builder, fnc: FunctionInfo) =
       else:
         b.addRaw param.`type`
     b.addRaw ")"
-    if isDiscardable notin fnc.flags and fnc.returnType != "void":
+    if fnc.returnType != "void":
       b.addRaw ": "
       if isString in fnc.flags:
         b.addRaw "string"
@@ -181,11 +181,11 @@ proc generateWrappedProc*(b: var Builder, fnc: FunctionInfo) =
         b.addRaw "bool"
       else:
         b.addRaw fnc.returnType
+    if isDiscardable in fnc.flags:
+      b.addRaw " {.discardable.}"
     b.addRaw " ="
     b.addBlockDoc fnc.description
     withBlock(b):
-      if isDiscardable in fnc.flags:
-        b.addRaw "discard "
       if isString in fnc.flags:
         b.addRaw "$"
       b.addRaw fnc.name

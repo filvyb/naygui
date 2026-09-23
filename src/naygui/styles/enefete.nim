@@ -1,6 +1,7 @@
-import common
+import common, raygui
 
-{.passC: "-I" & getRayguiStyleDir("enefete").}
+const styleData = staticRead(getRayguiStyleDir("enefete") & "/style_enefete.rgs")
 
-proc guiLoadStyleEnefete*() {.importc: "GuiLoadStyleEnefete", cdecl, header: "style_enefete.h".}
-  ## Load style enefete over global style
+proc guiLoadStyleEnefete*() =
+  ## Load style Enefete over global style.
+  guiLoadStyleFromMemory(styleData.toOpenArrayByte(0, styleData.high))

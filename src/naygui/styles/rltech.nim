@@ -1,6 +1,7 @@
-import common
+import common, raygui
 
-{.passC: "-I" & getRayguiStyleDir("rltech").}
+const styleData = staticRead(getRayguiStyleDir("rltech") & "/style_rltech.rgs")
 
-proc guiLoadStyleRLtech*() {.importc: "GuiLoadStyleRLTech", cdecl, header: "style_rltech.h".}
-  ## Load style RLtech over global style
+proc guiLoadStyleRLtech*() =
+  ## Load style Rltech over global style.
+  guiLoadStyleFromMemory(styleData.toOpenArrayByte(0, styleData.high))

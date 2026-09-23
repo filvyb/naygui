@@ -1,6 +1,7 @@
-import common
+import common, raygui
 
-{.passC: "-I" & getRayguiStyleDir("genesis").}
+const styleData = staticRead(getRayguiStyleDir("genesis") & "/style_genesis.rgs")
 
-proc guiLoadStyleGenesis*() {.importc: "GuiLoadStyleGenesis", cdecl, header: "style_genesis.h".}
-  ## Load style Genesis over global style
+proc guiLoadStyleGenesis*() =
+  ## Load style Genesis over global style.
+  guiLoadStyleFromMemory(styleData.toOpenArrayByte(0, styleData.high))

@@ -21,8 +21,8 @@
 #
 #
 #   DEPENDENCIES:
-#       raylib 4.5          - Windowing/input management and drawing
-#       raygui 4.0          - Immediate-mode GUI controls with custom styling and icons
+#       raylib 6.0          - Windowing/input management and drawing
+#       raygui 5.0          - Immediate-mode GUI controls with custom styling and icons
 #
 #   COMPILATION (Windows - MinGW):
 #       gcc -o $(NAME_PART).exe $(FILE_NAME) -Iraygui/raygui/src -lraylib -lopengl32 -lgdi32 -std=c99
@@ -41,7 +41,7 @@ import raylib, raygui, std/[strutils, strformat]
 # raygui embedded styles
 
 import naygui/styles/[amber, ashes, bluish, candy, cherry, cyber, dark, enefete, jungle, genesis,
-  lavanda, rltech, sunny, terminal]
+  lavanda, rltech, sunny, terminal, advance, brick, pocket, turbo, wisteria]
 
 const
   screenWidth = 700
@@ -153,6 +153,16 @@ proc main =
         guiLoadStyleSunny()
       of 14:
         guiLoadStyleGenesis()
+      of 15:
+        guiLoadStyleAdvance()
+      of 16:
+        guiLoadStyleBrick()
+      of 17:
+        guiLoadStylePocket()
+      of 18:
+        guiLoadStyleTurbo()
+      of 19:
+        guiLoadStyleWisteria()
       else:
         discard
       guiSetStyle(Label, TextAlignment, GuiTextAlignment.Left)
@@ -168,43 +178,43 @@ proc main =
     guiSetStyle(Textbox, TextAlignment, Center)
     # guiSetStyle(Scrollbar, ArrowsVisible, true)
     # guiSetStyle(ValueBox, TextAlignment, Left)
-    if spinner(Rectangle(x: 25, y: 135, width: 125, height: 30), "", spinner001Value, 0, 100, spinnerEditMode):
+    if spinner(Rectangle(x: 25, y: 135, width: 125, height: 30), "", spinner001Value, 0, 100, spinnerEditMode) == ResultPressed:
       spinnerEditMode = not spinnerEditMode
-    if valueBox(Rectangle(x: 25, y: 175, width: 125, height: 30), "", valueBox002Value, 0, 100, valueBoxEditMode):
+    if valueBox(Rectangle(x: 25, y: 175, width: 125, height: 30), "", valueBox002Value, 0, 100, valueBoxEditMode) == ResultPressed:
       valueBoxEditMode = not valueBoxEditMode
     guiSetStyle(Textbox, TextAlignment, GuiTextAlignment.Left)
-    if textBox(Rectangle(x: 25, y: 215, width: 125, height: 30), textBoxText, textBoxEditMode):
+    if textBox(Rectangle(x: 25, y: 215, width: 125, height: 30), textBoxText, textBoxEditMode) == ResultPressed:
       textBoxEditMode = not textBoxEditMode
     guiSetStyle(Button, TextAlignment, Center)
-    if button(Rectangle(x: 25, y: 255, width: 125, height: 30), iconText(FileSave, "Save File")):
+    if button(Rectangle(x: 25, y: 255, width: 125, height: 30), iconText(FileSave, "Save File")) == ResultPressed:
       showTextInputBox = true
     groupBox(Rectangle(x: 25, y: 310, width: 125, height: 150), "STATES")
     # guiLock()
     guiSetState(Normal)
-    if button(Rectangle(x: 30, y: 320, width: 115, height: 30), "NORMAL"):
+    if button(Rectangle(x: 30, y: 320, width: 115, height: 30), "NORMAL") == ResultPressed:
       discard
     guiSetState(Focused)
-    if button(Rectangle(x: 30, y: 355, width: 115, height: 30), "FOCUSED"):
+    if button(Rectangle(x: 30, y: 355, width: 115, height: 30), "FOCUSED") == ResultPressed:
       discard
     guiSetState(Pressed)
-    if button(Rectangle(x: 30, y: 390, width: 115, height: 30), "#15#PRESSED"):
+    if button(Rectangle(x: 30, y: 390, width: 115, height: 30), "#15#PRESSED") == ResultPressed:
       discard
     guiSetState(Disabled)
-    if button(Rectangle(x: 30, y: 425, width: 115, height: 30), "DISABLED"):
+    if button(Rectangle(x: 30, y: 425, width: 115, height: 30), "DISABLED") == ResultPressed:
       discard
     guiSetState(Normal)
     # guiUnlock()
     comboBox(Rectangle(x: 25, y: 470, width: 125, height: 30),
-        "default;Jungle;Lavanda;Dark;Bluish;Cyber;Terminal;RLtech;Amber;Ashes;Candy;Cherry;Enefete;Sunny;Genesis", visualStyleActive)
+        "default;Jungle;Lavanda;Dark;Bluish;Cyber;Terminal;RLtech;Amber;Ashes;Candy;Cherry;Enefete;Sunny;Genesis;Advance;Brick;Pocket;Turbo;Wisteria", visualStyleActive)
     # NOTE: GuiDropdownBox must draw after any other control that can be covered on unfolding
     guiUnlock()
     guiSetStyle(Dropdownbox, TextAlignment, Left)
     if dropdownBox(Rectangle(x: 25, y: 65, width: 125, height: 30),
-        "#01#ONE;#02#TWO;#03#THREE;#04#FOUR", dropdownBox001Active, dropDown001EditMode):
+        "#01#ONE;#02#TWO;#03#THREE;#04#FOUR", dropdownBox001Active, dropDown001EditMode) != ResultNone:
       dropDown001EditMode = not dropDown001EditMode
     guiSetStyle(Dropdownbox, TextAlignment, Center)
     if dropdownBox(Rectangle(x: 25, y: 25, width: 125, height: 30), "ONE;TWO;THREE",
-        dropdownBox000Active, dropDown000EditMode):
+        dropdownBox000Active, dropDown000EditMode) != ResultNone:
       dropDown000EditMode = not dropDown000EditMode
     listView(Rectangle(x: 165, y: 25, width: 140, height: 140),
         "Charmander;Bulbasaur;#18#Squirtel;Pikachu;Eevee;Pidgey",
@@ -237,24 +247,26 @@ proc main =
     colorBarAlpha(Rectangle(x: 320, y: 490, width: 200, height: 30), "", alphaValue)
     if showMessageBox:
       drawRectangle(0, 0, getScreenWidth(), getScreenHeight(), fade(RayWhite, 0.8))
+      var buttonActive = -1'i32
       let result = messageBox(Rectangle(
           x: float32(getScreenWidth() div 2) - 125,
           y: float32(getScreenHeight() div 2) - 50, width: 250, height: 100),
-          iconText(Exit, "Close Window"), "Do you really want to exit?", "Yes;No")
-      if result == 0 or result == 2:
+          iconText(Exit, "Close Window"), "Do you really want to exit?", "Yes;No", buttonActive)
+      if result == ResultPressed and buttonActive in [0'i32, 2]:
         showMessageBox = false
-      elif result == 1:
+      elif result == ResultPressed and buttonActive == 1:
         exitWindow = true
     if showTextInputBox:
       drawRectangle(0, 0, getScreenWidth(), getScreenHeight(), fade(RayWhite, 0.8))
+      var buttonActive = -1'i32
       let result = textInputBox(Rectangle(
           x: float32(getScreenWidth() div 2) - 120,
           y: float32(getScreenHeight() div 2) - 60, width: 240, height: 140), "",
-          iconText(FileSave, "Save file as..."), "Ok;Cancel", textInput)
-      if result == 1:
+          iconText(FileSave, "Save file as..."), textInput, "Ok;Cancel", buttonActive)
+      if result == ResultPressed and buttonActive == 1:
         # TODO: Validate textInput value and save
         textInputFileName = textInput
-      if result == 0 or result == 1 or result == 2:
+      if result == ResultPressed:
         showTextInputBox = false
         textInput.setLen(0)
     endDrawing()

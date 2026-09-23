@@ -12,15 +12,8 @@ when defined(mingw):
     joinPath(head.string, tail.string).nativeToUnixPath.Path
   {.passC: "-I/usr/x86_64-w64-mingw32/include".}
 
-# {.passC: "-DRAYGUI_IMPLEMENTATION".}
 {.passC: "-I" & rayguiDir.string.}
 {.compile: string(rayguiDir / Path"raygui.c").}
 
 const
-  RayguiVersion* = (4, 5, 0)
-
-type
-  ConstCstringArray {.importc: "const char **".} = object
-
-proc toConstCStringArray(x: cstringArray): ConstCstringArray {.
-    importc: "(const char **)", noconv, nodecl.}
+  RayguiVersion* = (5, 0, 0)

@@ -181,7 +181,7 @@ proc processFunctionFlags(fnc: var FunctionInfo, config: ConfigData) =
   if fnc.name in config.noSideEffectsFuncs:
     fnc.flags.incl isFunc
   if isWrappedFunc notin fnc.flags:
-    if fnc.name in config.discardReturn:
+    if fnc.name in config.discardable:
       fnc.flags.incl isDiscardable
       fnc.flags.incl isAutoWrappedFunc
     if fnc.name in config.boolReturn:

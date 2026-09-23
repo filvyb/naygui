@@ -13,52 +13,81 @@ proc `=copy`*(dest: var TextArray; source: TextArray) {.error.}
 proc toTextArray*(texts: openArray[string]): TextArray =
   TextArray(data: allocCStringArray(texts), count: texts.len.int32)
 
-proc memFree(`ptr`: pointer) {.importc: "RAYGUI_FREE", sideEffect.}
+proc memFree(p: pointer) {.importc: "NayguiFree", cdecl, sideEffect.}
 
-proc listView*(bounds: Rectangle, text: TextArray, scrollIndex: var int32, active: var int32, focus: var int32) =
-  ## List View with extended parameters
-  discard listViewImpl(bounds, toConstCStringArray(text.data), text.count, addr scrollIndex, addr active, addr focus)
+proc listView*(bounds: Rectangle, text: TextArray, scrollIndex: var int32, active: var int32, focus: var int32): GuiResult {.discardable.} =
+  ## List View with extended parameters.
+  listViewImpl(bounds, text.data, text.count, addr scrollIndex, addr active, addr focus)
 
-proc tabBar*(bounds: Rectangle, text: TextArray, active: var int32): int32 =
-  ## Tab Bar control, returns TAB to be closed or -1
-  tabBarImpl(bounds, toConstCStringArray(text.data), text.count, addr active)
+proc tabBar*(bounds: Rectangle, text: TextArray, hscroll: var int32, active: var int32, focus: var int32): GuiResult {.discardable.} =
+  ## Tab Bar with extended parameters. ResultTabClose identifies the tab in focus.
+  tabBarImpl(bounds, text.data, text.count, addr hscroll, addr active, addr focus)
+
+proc takeIconNames(names: cstringArray): seq[string] =
+  if names == nil: return
+  # Upstream allocates 512 slots, with no extra sentinel when all are used.
+  for i in 0..<512:
+    if names[i] == nil: break
+    var name = ""
+    for j in 0..<32:
+      if names[i][j] == '\0': break
+      name.add(names[i][j])
+    result.add(name)
+    memFree(names[i])
+  memFree(names)
 
 proc loadIcons*(fileName: string, loadIconsName: bool): seq[string] =
-  ## Load raygui icons file (.rgi) into internal icons data
-  let iconsName = loadIconsImpl(fileName.cstring, loadIconsName)
-  result = cstringArrayToSeq(iconsName)
-  memFree(iconsName)
+  ## Load raygui icons file (.rgi), optionally returning the icon names.
+  takeIconNames(loadIconsImpl(fileName.cstring, loadIconsName))
 
-template setupTextBox(call: untyped): untyped =
-  # Helper template to set up a text box with common code.
-  if text.len == 0:
-    assert text.capacity != 0, "Expects a preallocated string buffer."
-    text.setLen(1)
-    text[0] = '\0'
+proc loadIconsFromMemory*(data: openArray[uint8], loadIconsName: bool): seq[string] =
+  ## Load raygui icons (.rgi) from memory, optionally returning the icon names.
+  if data.len == 0: return
+  takeIconNames(loadIconsFromMemoryImpl(unsafeAddr data[0], data.len.int32, loadIconsName))
+
+proc guiLoadStyleFromMemory*(data: openArray[uint8]) =
+  ## Load a binary raygui style (.rgs) from memory.
+  if data.len > 0:
+    guiLoadStyleFromMemoryImpl(unsafeAddr data[0], data.len.int32)
+
+template withTextBuffer(text: var string, call: untyped): untyped =
+  # setLen makes a writable copy before C mutates the string, and exposes its
+  # full capacity. Restore the Nim length on every frame, including live edits.
+  assert text.capacity > 0, "Expects a preallocated string buffer."
+  let oldLen = text.len
+  text.setLen(text.capacity)
+  if oldLen < text.len: text[oldLen] = '\0'
   result = call
-  if result.int32 == 1:
-    text.setLen(text.cstring.len)
+  var newLen = 0
+  while newLen < text.len and text[newLen] != '\0': inc newLen
+  text.setLen(newLen)
 
-proc textBox*(bounds: Rectangle, text: var string, editMode: bool): bool =
-  ## Text Box control, updates input text
-  setupTextBox:
-    textBoxImpl(bounds, text.cstring, text.capacity.int32 + 1, editMode) != 0
+proc textBox*(bounds: Rectangle, text: var string, editMode: bool): GuiResult {.discardable.} =
+  ## Text Box control. Reserve the maximum input length with newStringOfCap.
+  withTextBuffer(text):
+    textBoxImpl(bounds, text.cstring, text.len.int32 + 1, editMode)
 
-proc textInputBox*(bounds: Rectangle, title: string, message: string, buttons: string, text: var string, secretViewActive: var bool): int32 =
-  ## Text Input Box control, ask for text, supports secret.
-  setupTextBox:
-    textInputBoxImpl(bounds, title.cstring, if message.len == 0: nil else: message.cstring, buttons.cstring, text.cstring, text.capacity.int32 + 1, addr secretViewActive)
+proc valueBoxFloat*(bounds: Rectangle, text: string, textValue: var string, value: var float32, editMode: bool): GuiResult {.discardable.} =
+  ## Float Value Box. The input buffer must have capacity for at least 32 bytes.
+  assert textValue.capacity >= 32, "Expects a buffer with capacity of at least 32."
+  withTextBuffer(textValue):
+    valueBoxFloatImpl(bounds, if text.len == 0: nil else: text.cstring, textValue.cstring, addr value, editMode)
 
-proc textInputBox*(bounds: Rectangle, title: string, message: string, buttons: string, text: var string): int32 =
-  ## Text Input Box control, ask for text, without secret.
-  setupTextBox:
-    textInputBoxImpl(bounds, title.cstring, if message.len == 0: nil else: message.cstring, buttons.cstring, text.cstring, text.capacity.int32 + 1, nil)
+proc textInputBox*(bounds: Rectangle, title: string, message: string, text: var string, buttons: string, buttonActive: var int32, secretViewActive: var bool): GuiResult {.discardable.} =
+  ## Text Input Box with secret mode. buttonActive is 0 for close, 1 for the first button.
+  withTextBuffer(text):
+    textInputBoxImpl(bounds, title.cstring, if message.len == 0: nil else: message.cstring, text.cstring, text.len.int32 + 1, buttons.cstring, addr buttonActive, addr secretViewActive)
+
+proc textInputBox*(bounds: Rectangle, title: string, message: string, text: var string, buttons: string, buttonActive: var int32): GuiResult {.discardable.} =
+  ## Text Input Box without secret mode. Inspect buttonActive on ResultPressed.
+  withTextBuffer(text):
+    textInputBoxImpl(bounds, title.cstring, if message.len == 0: nil else: message.cstring, text.cstring, text.len.int32 + 1, buttons.cstring, addr buttonActive, nil)
 
 type
   GuiStyleProperty* = ControlProperty|DefaultProperty|ToggleProperty|SliderProperty|
                       ProgressBarProperty|ScrollBarProperty|CheckBoxProperty|
                       ComboBoxProperty|DropdownBoxProperty|TextBoxProperty|
-                      ValueBoxProperty|ListViewProperty|ColorPickerProperty
+                      ValueBoxProperty|TabBarProperty|ListViewProperty|ColorPickerProperty
 
   GuiStyleValue* = GuiState|GuiTextAlignment|GuiTextAlignmentVertical|
                    GuiTextWrapMode|GuiControl|int32|bool
@@ -85,7 +114,9 @@ template validatePropertyControlMapping(control, property: untyped) =
   elif property is TextBoxProperty:
     assert control == Textbox, "TextBoxProperty should match Textbox control"
   elif property is ValueBoxProperty:
-    assert control in {Control11, Spinner}, "ValueBoxProperty should match ValueBox control"
+    assert control == Valuebox, "ValueBoxProperty should match ValueBox control"
+  elif property is TabBarProperty:
+    assert control == Tabbar, "TabBarProperty should match Tabbar control"
   elif property is ListViewProperty:
     assert control == Listview, "ListViewProperty should match Listview control"
   elif property is ColorPickerProperty:

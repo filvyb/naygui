@@ -1,6 +1,7 @@
-import common
+import common, raygui
 
-{.passC: "-I" & getRayguiStyleDir("jungle").}
+const styleData = staticRead(getRayguiStyleDir("jungle") & "/style_jungle.rgs")
 
-proc guiLoadStyleJungle*() {.importc: "GuiLoadStyleJungle", cdecl, header: "style_jungle.h".}
-  ## Load style jungle over global style
+proc guiLoadStyleJungle*() =
+  ## Load style Jungle over global style.
+  guiLoadStyleFromMemory(styleData.toOpenArrayByte(0, styleData.high))

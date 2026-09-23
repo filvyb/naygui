@@ -1,6 +1,7 @@
-import common
+import common, raygui
 
-{.passC: "-I" & getRayguiStyleDir("bluish").}
+const styleData = staticRead(getRayguiStyleDir("bluish") & "/style_bluish.rgs")
 
-proc guiLoadStyleBluish*() {.importc: "GuiLoadStyleBluish", cdecl, header: "style_bluish.h".}
-  ## Load style bluish over global style
+proc guiLoadStyleBluish*() =
+  ## Load style Bluish over global style.
+  guiLoadStyleFromMemory(styleData.toOpenArrayByte(0, styleData.high))
